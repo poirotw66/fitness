@@ -24,6 +24,18 @@ function StatsPanel() {
     }
   }
 
+  const fixMealTypes = async () => {
+    try {
+      const response = await api.post('/admin/fix-meal-types')
+      alert(response.data.message)
+      // Refresh stats after fixing
+      fetchStats()
+    } catch (error) {
+      console.error('Error fixing meal types:', error)
+      alert('修正失敗，請稍後再試')
+    }
+  }
+
   if (collapsed) {
     return (
       <div className="w-12 bg-white border-l border-gray-200 flex items-center justify-center">
@@ -60,20 +72,49 @@ function StatsPanel() {
           <>
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">卡路里</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">攝入</span>
-                  <span className="font-semibold text-green-600">{stats.calories_in || 0} kcal</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">消耗</span>
-                  <span className="font-semibold text-red-600">{stats.calories_out || 0} kcal</span>
-                </div>
-                <div className="flex justify-between pt-2 border-t border-gray-200">
-                  <span className="text-sm font-medium text-gray-700">淨值</span>
-                  <span className={`font-semibold ${(stats.calories_in || 0) - (stats.calories_out || 0) >= 0 ? 'text-orange-600' : 'text-blue-600'}`}>
-                    {(stats.calories_in || 0) - (stats.calories_out || 0)} kcal
-                  </span>
+              <div className="space-y-3">
+                {/* Meals Detail */}
+                {stats.meals && stats.meals.length > 0 ? (
+                  <div className="space-y-2 mb-3">
+                    {stats.meals.map((meal, idx) => (
+                      <div key={idx} className="pb-2 border-b border-gray-200 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium text-gray-700">{meal.meal_type_name}</span>
+                          <span className="text-sm font-semibold text-green-600">{Math.round(meal.calories)} kcal</span>
+                        </div>
+                        {meal.items && meal.items.length > 0 && (
+                          <div className="pl-2 space-y-0.5">
+                            {meal.items.map((item, itemIdx) => (
+                              <div key={itemIdx} className="flex justify-between text-xs text-gray-600">
+                                <span className="truncate flex-1">{item.food_name}</span>
+                                <span className="ml-2">{Math.round(item.calories)} kcal</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500 mb-2">尚無飲食記錄</div>
+                )}
+                
+                {/* Summary */}
+                <div className="space-y-2 pt-2 border-t border-gray-200">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">總攝入</span>
+                    <span className="font-semibold text-green-600">{stats.calories_in || 0} kcal</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">消耗</span>
+                    <span className="font-semibold text-red-600">{stats.calories_out || 0} kcal</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                    <span className="text-sm font-medium text-gray-700">淨值</span>
+                    <span className={`font-semibold ${(stats.calories_in || 0) - (stats.calories_out || 0) >= 0 ? 'text-orange-600' : 'text-blue-600'}`}>
+                      {(stats.calories_in || 0) - (stats.calories_out || 0)} kcal
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -98,9 +139,37 @@ function StatsPanel() {
 
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">運動</h3>
-              <div className="text-sm text-gray-600">
-                {stats.exercise_count || 0} 次運動
-              </div>
+              {stats.exercises && stats.exercises.length > 0 ? (
+                <div className="space-y-2">
+                  {stats.exercises.map((exercise, idx) => (
+                    <div key={idx} className="text-sm">
+                      <div className="flex justify-between items-start">
+                        <span className="text-gray-700 font-medium">{exercise.exercise_type}</span>
+                        <span className="text-gray-600">{exercise.calories_burned} kcal</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {exercise.duration >= 60 
+                          ? `${Math.floor(exercise.duration / 60)} 小時 ${Math.round(exercise.duration % 60)} 分鐘`
+                          : `${Math.round(exercise.duration)} 分鐘`}
+                      </div>
+                    </div>
+                  ))}
+                  {stats.total_duration > 0 && (
+                    <div className="pt-2 border-t border-gray-200 mt-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">總時長</span>
+                        <span className="font-medium text-gray-700">
+                          {stats.total_duration >= 60
+                            ? `${Math.floor(stats.total_duration / 60)} 小時 ${Math.round(stats.total_duration % 60)} 分鐘`
+                            : `${Math.round(stats.total_duration)} 分鐘`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">尚無運動記錄</div>
+              )}
             </div>
           </>
         ) : (
@@ -108,13 +177,20 @@ function StatsPanel() {
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 space-y-2">
         <Link
           to="/reports"
           className="block w-full text-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
         >
           查看完整報告
         </Link>
+        <button
+          onClick={fixMealTypes}
+          className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+          title="修正今日餐點類型（如果顯示錯誤）"
+        >
+          修正餐點類型
+        </button>
       </div>
     </div>
   )

@@ -22,20 +22,28 @@ class AgentState(TypedDict):
 
 class FitnessAgent:
     def __init__(self):
-        # Try gemini-2.0-flash-exp first, fallback to gemini-pro if not available
+        # Try gemini-2.5-flash first, fallback to gemini-2.5-pro if not available
         try:
             self.llm = ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash-exp",
+                model="gemini-2.5-flash",
                 google_api_key=GEMINI_API_KEY,
                 temperature=0.7,
             )
         except:
-            # Fallback to gemini-pro
-            self.llm = ChatGoogleGenerativeAI(
-                model="gemini-pro",
-                google_api_key=GEMINI_API_KEY,
-                temperature=0.7,
-            )
+            # Fallback to gemini-2.5-pro
+            try:
+                self.llm = ChatGoogleGenerativeAI(
+                    model="gemini-3-pro-preview",
+                    google_api_key=GEMINI_API_KEY,
+                    temperature=0.7,
+                )
+            except:
+                # Final fallback to gemini-1.5-pro
+                self.llm = ChatGoogleGenerativeAI(
+                    model="gemini-2.5-pro",
+                    google_api_key=GEMINI_API_KEY,
+                    temperature=0.7,
+                )
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -67,8 +75,41 @@ class FitnessAgent:
         # Extract data using LLM
         last_message = state["messages"][-1].content if state["messages"] else ""
         
+        # Get recent conversation context for meal type inference
+        recent_messages = []
+        for msg in state["messages"][-5:]:  # Last 5 messages for context
+            if isinstance(msg, HumanMessage):
+                recent_messages.append(f"用戶: {msg.content}")
+            elif isinstance(msg, AIMessage):
+                recent_messages.append(f"助手: {msg.content}")
+        
+        context_text = "\n".join(recent_messages) if recent_messages else ""
+        
         extraction_prompt = f"""
-        分析以下用戶訊息，提取飲食和運動資訊。如果訊息中包含飲食或運動資訊，請以 JSON 格式返回：
+        分析以下用戶訊息和對話上下文，提取飲食和運動資訊。如果訊息中包含飲食或運動資訊，請以 JSON 格式返回：
+        
+        餐點類型判斷規則（非常重要，請仔細判斷）：
+        1. 如果訊息或上下文明確提到以下關鍵詞，請對應設置：
+           - "早餐"、"早上吃"、"早飯"、"morning"、"breakfast" → meal_type: "breakfast"
+           - "午餐"、"中午吃"、"午飯"、"lunch" → meal_type: "lunch"
+           - "晚餐"、"晚上吃"、"晚飯"、"dinner" → meal_type: "dinner"
+           - "點心"、"零食"、"snack" → meal_type: "snack"
+        
+        2. 如果訊息提到"便當"、"飯盒"、"套餐"等，通常是午餐或晚餐，請根據上下文判斷
+        
+        3. 如果訊息沒有明確提到餐點類型，請根據以下規則推斷：
+           - 查看對話歷史中是否有提到時間或餐點類型
+           - 如果對話中提到"剛才"、"剛剛"、"現在"等，請根據當前時間推斷
+           - 如果完全無法判斷，才使用 "snack"
+        
+        4. 請特別注意：不要將午餐或晚餐誤判為點心！
+        
+        對話上下文：
+        {context_text}
+        
+        當前用戶訊息：{last_message}
+        
+        請返回 JSON 格式：
         {{
             "diet": {{
                 "has_diet": true/false,
@@ -88,8 +129,6 @@ class FitnessAgent:
         }}
         
         如果沒有相關資訊，返回 {{"diet": {{"has_diet": false}}, "exercise": {{"has_exercise": false}}}}
-        
-        用戶訊息：{last_message}
         """
         
         try:

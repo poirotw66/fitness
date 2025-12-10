@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../context/authStore'
 import ChatMessage from '../components/ChatMessage'
 import StatsPanel from '../components/StatsPanel'
+import ConversationHistory from '../components/ConversationHistory'
 import api from '../services/api'
 
 function Chat() {
@@ -12,6 +13,8 @@ function Chat() {
   const [uploading, setUploading] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
   const [mealType, setMealType] = useState('snack')
+  const [currentConversationId, setCurrentConversationId] = useState(null)
+  const [loadingHistory, setLoadingHistory] = useState(false)
   const fileInputRef = useRef(null)
   const messagesEndRef = useRef(null)
   const { logout, user } = useAuthStore()
@@ -24,6 +27,86 @@ function Chat() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Load conversation history on mount
+  useEffect(() => {
+    const loadOnMount = async () => {
+      try {
+        // Try to load last conversation from localStorage first
+        const lastConversationId = localStorage.getItem('lastConversationId')
+        if (lastConversationId) {
+          try {
+            await loadConversation(parseInt(lastConversationId))
+            return
+          } catch (e) {
+            // If loading fails, try to load latest
+            console.log('Failed to load last conversation, loading latest')
+          }
+        }
+        
+        // Load the most recent conversation
+        await loadConversationHistory()
+      } catch (error) {
+        console.error('Error loading conversation on mount:', error)
+      }
+    }
+    
+    loadOnMount()
+  }, [])
+
+  const loadConversationHistory = async () => {
+    try {
+      const response = await api.get('/chat/conversations')
+      if (response.data && response.data.length > 0) {
+        // Load the most recent conversation
+        const latestConv = response.data[0]
+        await loadConversation(latestConv.id)
+      }
+    } catch (error) {
+      console.error('Error loading conversation history:', error)
+    }
+  }
+
+  const loadConversation = async (conversationId) => {
+    try {
+      setLoadingHistory(true)
+      const response = await api.get(`/chat/conversations/${conversationId}`)
+      const conv = response.data
+      
+      setCurrentConversationId(conv.id)
+      // Save to localStorage
+      localStorage.setItem('lastConversationId', conv.id.toString())
+      
+      // Convert messages to display format
+      const formattedMessages = conv.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        created_at: msg.created_at,
+        // Preserve image and nutritionData if they exist in the message
+        image: msg.image,
+        nutritionData: msg.nutritionData
+      }))
+      
+      setMessages(formattedMessages)
+    } catch (error) {
+      console.error('Error loading conversation:', error)
+      // If conversation not found, clear localStorage and load latest
+      localStorage.removeItem('lastConversationId')
+      await loadConversationHistory()
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  const handleNewConversation = () => {
+    setCurrentConversationId(null)
+    setMessages([])
+    localStorage.removeItem('lastConversationId')
+  }
+
+  const handleSelectConversation = (conversationId) => {
+    loadConversation(conversationId)
+  }
 
   const handleSend = async (e) => {
     e.preventDefault()
@@ -43,12 +126,16 @@ function Chat() {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ 
+          message: input,
+          conversation_id: currentConversationId 
+        }),
       })
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let assistantMessage = { role: 'assistant', content: '' }
+      let receivedConversationId = null
 
       setMessages((prev) => [...prev, assistantMessage])
 
@@ -62,7 +149,16 @@ function Chat() {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6)
-            if (data === '[DONE]') continue
+            if (data === '[DONE]') {
+              // When done, reload conversation to get all messages from database
+              if (receivedConversationId) {
+                setTimeout(async () => {
+                  await loadConversation(receivedConversationId)
+                  window.dispatchEvent(new Event('conversationUpdated'))
+                }, 300)
+              }
+              continue
+            }
 
             try {
               const parsed = JSON.parse(data)
@@ -73,6 +169,13 @@ function Chat() {
                   newMessages[newMessages.length - 1] = { ...assistantMessage }
                   return newMessages
                 })
+              }
+              // Update conversation ID if provided
+              if (parsed.conversation_id) {
+                receivedConversationId = parsed.conversation_id
+                setCurrentConversationId(receivedConversationId)
+                // Save to localStorage
+                localStorage.setItem('lastConversationId', receivedConversationId.toString())
               }
             } catch (e) {
               // Ignore parse errors
@@ -124,6 +227,11 @@ function Chat() {
       formData.append('meal_type', mealType)
 
       const token = useAuthStore.getState().token
+      // Add conversation_id to formData if exists
+      if (currentConversationId) {
+        formData.append('conversation_id', currentConversationId.toString())
+      }
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/upload/image`, {
         method: 'POST',
         headers: {
@@ -135,43 +243,35 @@ function Chat() {
       const result = await response.json()
 
       if (result.success) {
-        // Add user message with image
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'user',
-            content: `上傳了食物圖片：${result.data.food_name}`,
-            image: selectedImage.preview,
-          }
-        ])
-
-        // Add assistant response
-        const data = result.data
-        const responseText = `✅ 圖片分析完成！
-
-**食物名稱**：${data.food_name}
-**份量**：${data.serving_size || '未指定'}
-**卡路里**：${data.calories} kcal
-**蛋白質**：${data.protein} g
-**碳水化合物**：${data.carbs} g
-**脂肪**：${data.fat} g
-
-${data.has_nutrition_label ? '📋 已識別營養成分表' : '🔍 已推估營養成分'}
-${data.estimated ? '(此為推估值，建議參考實際營養標籤)' : ''}
-
-已自動記錄為${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : mealType === 'dinner' ? '晚餐' : '點心'}！`
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: responseText,
-            nutritionData: data,
-          }
-        ])
-
-        // Refresh stats panel
-        // The stats will be updated automatically on next refresh
+        // Update conversation ID if provided
+        if (result.conversation_id) {
+          setCurrentConversationId(result.conversation_id)
+          localStorage.setItem('lastConversationId', result.conversation_id.toString())
+        }
+        
+        // Reload conversation to get all messages from database
+        if (result.conversation_id) {
+          setTimeout(async () => {
+            await loadConversation(result.conversation_id)
+            window.dispatchEvent(new Event('conversationUpdated'))
+          }, 300)
+        } else {
+          // Fallback: add messages locally if no conversation_id
+          const data = result.data
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'user',
+              content: `上傳了食物圖片：${data.food_name}`,
+              image: selectedImage.preview,
+            },
+            {
+              role: 'assistant',
+              content: `✅ 圖片分析完成！\n\n**食物名稱**：${data.food_name}\n**卡路里**：${data.calories} kcal\n已自動記錄為${data.meal_type === 'breakfast' ? '早餐' : data.meal_type === 'lunch' ? '午餐' : data.meal_type === 'dinner' ? '晚餐' : '點心'}！`,
+              nutritionData: data,
+            }
+          ])
+        }
 
         // Clear selection
         setSelectedImage(null)
@@ -198,6 +298,13 @@ ${data.estimated ? '(此為推估值，建議參考實際營養標籤)' : ''}
 
   return (
     <div className="flex h-screen bg-gray-100">
+      {/* Conversation History Sidebar */}
+      <ConversationHistory
+        currentConversationId={currentConversationId}
+        onSelectConversation={handleSelectConversation}
+        onNewConversation={handleNewConversation}
+      />
+
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -216,15 +323,20 @@ ${data.estimated ? '(此為推估值，建議參考實際營養標籤)' : ''}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {messages.length === 0 && (
+          {loadingHistory ? (
+            <div className="text-center text-gray-500 mt-20">
+              <p>載入對話中...</p>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-20">
               <p className="text-lg">開始與 AI 助手對話吧！</p>
               <p className="text-sm mt-2">您可以記錄飲食、運動，或詢問健康相關問題</p>
             </div>
+          ) : (
+            messages.map((msg, idx) => (
+              <ChatMessage key={idx} message={msg} />
+            ))
           )}
-          {messages.map((msg, idx) => (
-            <ChatMessage key={idx} message={msg} />
-          ))}
           {loading && (
             <div className="flex justify-start">
               <div className="bg-white rounded-lg px-4 py-2 shadow-sm">

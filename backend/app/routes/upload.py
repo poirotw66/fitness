@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.models.database import get_db
 from app.models.user import User
+from app.models.conversation import Conversation, Message
 from app.auth.security import get_current_user
 from app.services.image_service import analyze_food_image
 from app.services.diet_service import DietService
+from app.services.meal_type_detector import correct_meal_type
 from datetime import date
 import io
 
@@ -15,7 +18,8 @@ router = APIRouter(prefix="/upload", tags=["upload"])
 @router.post("/image")
 async def upload_image(
     file: UploadFile = File(...),
-    meal_type: str = "snack",
+    meal_type: str = Form("snack"),
+    conversation_id: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -39,24 +43,92 @@ async def upload_image(
         # Analyze image
         analysis_result = analyze_food_image(image_data)
         
+        # Get or create conversation
+        conv_id = None
+        if conversation_id:
+            try:
+                conv_id = int(conversation_id)
+            except (ValueError, TypeError):
+                conv_id = None
+        
+        if conv_id:
+            conversation = db.query(Conversation).filter(
+                Conversation.id == conv_id,
+                Conversation.user_id == current_user.id
+            ).first()
+            if not conversation:
+                conversation = Conversation(user_id=current_user.id)
+                db.add(conversation)
+                db.commit()
+                db.refresh(conversation)
+        else:
+            conversation = Conversation(user_id=current_user.id)
+            db.add(conversation)
+            db.commit()
+            db.refresh(conversation)
+        
+        # Save user message about image upload
+        food_name = analysis_result.get("food_name", "未知食物")
+        user_message = Message(
+            conversation_id=conversation.id,
+            role="user",
+            content=f"上傳了食物圖片：{food_name}"
+        )
+        db.add(user_message)
+        
         # If analysis was successful, save to database
         if not analysis_result.get("error"):
+            # Correct meal type based on food name
+            corrected_meal_type = correct_meal_type(food_name, meal_type, "")
+            
             diet_log = DietService.save_diet_log(
                 db=db,
                 user_id=current_user.id,
-                meal_type=meal_type,
-                food_name=analysis_result.get("food_name", "未知食物"),
+                meal_type=corrected_meal_type,
+                food_name=food_name,
                 calories=analysis_result.get("calories", 0),
                 protein=analysis_result.get("protein", 0),
                 carbs=analysis_result.get("carbs", 0),
                 fat=analysis_result.get("fat", 0),
             )
             
+            meal_type_names = {
+                "breakfast": "早餐",
+                "lunch": "午餐",
+                "dinner": "晚餐",
+                "snack": "點心"
+            }
+            
+            # Save assistant response
+            response_text = f"""✅ 圖片分析完成！
+
+**食物名稱**：{food_name}
+**份量**：{analysis_result.get("serving_size", "未指定")}
+**卡路里**：{analysis_result.get("calories", 0)} kcal
+**蛋白質**：{analysis_result.get("protein", 0)} g
+**碳水化合物**：{analysis_result.get("carbs", 0)} g
+**脂肪**：{analysis_result.get("fat", 0)} g
+
+{analysis_result.get("has_nutrition_label", False) and "📋 已識別營養成分表" or "🔍 已推估營養成分"}
+{analysis_result.get("estimated", False) and "(此為推估值，建議參考實際營養標籤)" or ""}
+
+已自動記錄為{meal_type_names.get(corrected_meal_type, "點心")}！"""
+            
+            assistant_message = Message(
+                conversation_id=conversation.id,
+                role="assistant",
+                content=response_text
+            )
+            db.add(assistant_message)
+            
+            db.commit()
+            
             return {
                 "success": True,
-                "message": "图片分析完成并已保存",
+                "message": "圖片分析完成並已保存",
+                "conversation_id": conversation.id,
                 "data": {
-                    "food_name": analysis_result.get("food_name"),
+                    "food_name": food_name,
                     "serving_size": analysis_result.get("serving_size", ""),
                     "calories": analysis_result.get("calories"),
                     "protein": analysis_result.get("protein"),
@@ -64,7 +136,7 @@ async def upload_image(
                     "fat": analysis_result.get("fat"),
                     "has_nutrition_label": analysis_result.get("has_nutrition_label", False),
                     "estimated": analysis_result.get("estimated", False),
-                    "meal_type": meal_type,
+                    "meal_type": corrected_meal_type,
                     "diet_log_id": diet_log.id
                 }
             }

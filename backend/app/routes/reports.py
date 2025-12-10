@@ -101,23 +101,33 @@ async def get_reports(
             print(f"Error generating AI report: {e}")
             ai_report = "無法生成 AI 報告"
         
-        # Create report
-        report = DailyReport(
-            user_id=current_user.id,
-            date=report_date,
-            report_content={
-                "text": ai_report,
-                "calories_in": float(diet_stats.calories_in or 0),
-                "calories_out": float(exercise_stats.calories_out or 0),
-                "protein": float(diet_stats.protein or 0),
-                "carbs": float(diet_stats.carbs or 0),
-                "fat": float(diet_stats.fat or 0),
-                "exercise_count": int(exercise_stats.exercise_count or 0),
-            }
-        )
-        db.add(report)
-        db.commit()
-        db.refresh(report)
+        # Create report - use merge to handle potential race conditions
+        try:
+            report = DailyReport(
+                user_id=current_user.id,
+                date=report_date,
+                report_content={
+                    "text": ai_report,
+                    "calories_in": float(diet_stats.calories_in or 0),
+                    "calories_out": float(exercise_stats.calories_out or 0),
+                    "protein": float(diet_stats.protein or 0),
+                    "carbs": float(diet_stats.carbs or 0),
+                    "fat": float(diet_stats.fat or 0),
+                    "exercise_count": int(exercise_stats.exercise_count or 0),
+                }
+            )
+            db.add(report)
+            db.commit()
+            db.refresh(report)
+        except Exception as e:
+            # If unique constraint error, fetch existing report
+            db.rollback()
+            report = db.query(DailyReport).filter(
+                DailyReport.user_id == current_user.id,
+                DailyReport.date == report_date
+            ).first()
+            if not report:
+                raise
     
     # Format response
     report_data = report.report_content if isinstance(report.report_content, dict) else {}
