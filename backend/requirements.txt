@@ -12,4 +12,6 @@ langgraph==0.0.20
 google-generativeai==0.3.2
 python-dotenv==1.0.0
 psycopg2-binary==2.9.9
+Pillow==10.1.0
+
 

@@ -48,3 +48,4 @@ async def get_today_stats(
         "exercise_count": int(exercise_stats.exercise_count or 0),
     }
 
+

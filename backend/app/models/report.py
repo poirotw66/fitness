@@ -16,3 +16,4 @@ class DailyReport(Base):
     # Relationships
     user = relationship("User", back_populates="reports")
 
+

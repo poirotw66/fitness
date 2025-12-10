@@ -19,3 +19,4 @@ class User(Base):
     exercise_logs = relationship("ExerciseLog", back_populates="user")
     reports = relationship("DailyReport", back_populates="user")
 
+

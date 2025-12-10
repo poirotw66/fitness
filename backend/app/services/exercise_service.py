@@ -24,3 +24,4 @@ class ExerciseService:
         db.commit()
         return exercise_log
 
+

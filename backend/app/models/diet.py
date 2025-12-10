@@ -21,3 +21,4 @@ class DietLog(Base):
     # Relationships
     user = relationship("User", back_populates="diet_logs")
 
+
