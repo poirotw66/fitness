@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../context/authStore'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import ReactMarkdown from 'react-markdown'
 import api from '../services/api'
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']
@@ -371,10 +372,25 @@ function Reports() {
                 )}
               </div>
               {reports[0].report_content ? (
-                <div className="prose max-w-none">
-                  <p className="text-gray-700 whitespace-pre-wrap">
+                <div className="prose prose-sm sm:prose-base max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-gray-900 mt-6 mb-4 pb-2 border-b border-gray-200" {...props} />,
+                      h2: ({node, ...props}) => <h2 className="text-xl font-semibold text-gray-900 mt-5 mb-3" {...props} />,
+                      h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-gray-800 mt-4 mb-2" {...props} />,
+                      h4: ({node, ...props}) => <h4 className="text-base font-semibold text-gray-800 mt-3 mb-2" {...props} />,
+                      p: ({node, ...props}) => <p className="text-gray-700 mb-3 leading-relaxed" {...props} />,
+                      ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 space-y-1 text-gray-700" {...props} />,
+                      ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4 space-y-1 text-gray-700" {...props} />,
+                      li: ({node, ...props}) => <li className="ml-4 mb-1" {...props} />,
+                      strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
+                      em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
+                      hr: ({node, ...props}) => <hr className="my-6 border-gray-300" {...props} />,
+                      blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-indigo-500 pl-4 italic text-gray-600 my-4" {...props} />,
+                    }}
+                  >
                     {reports[0].report_content}
-                  </p>
+                  </ReactMarkdown>
                 </div>
               ) : (
                 <div className="text-center text-gray-500 py-8">

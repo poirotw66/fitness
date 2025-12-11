@@ -153,28 +153,30 @@ async def generate_report(
     
     # Generate AI report
     report_prompt = f"""
-    根據以下數據生成一份健康報告：
-    
-    日期：{report_date}
-    
-    飲食記錄：
-    - 總攝入卡路里：{diet_stats.calories_in or 0} kcal
-    - 蛋白質：{diet_stats.protein or 0} g
-    - 碳水化合物：{diet_stats.carbs or 0} g
-    - 脂肪：{diet_stats.fat or 0} g
-    
-    運動記錄：
-    - 總消耗卡路里：{exercise_stats.calories_out or 0} kcal
-    - 運動次數：{exercise_stats.exercise_count or 0} 次
-    
-    請生成一份簡潔、專業的健康報告，包含：
-    1. 今日總結
-    2. 營養分析
-    3. 運動總結
-    4. 健康建議
-    
-    請用繁體中文回答。
-    """
+根據以下數據生成一份健康報告：
+
+日期：{report_date}
+
+飲食記錄：
+- 總攝入卡路里：{diet_stats.calories_in or 0} kcal
+- 蛋白質：{diet_stats.protein or 0} g
+- 碳水化合物：{diet_stats.carbs or 0} g
+- 脂肪：{diet_stats.fat or 0} g
+
+運動記錄：
+- 總消耗卡路里：{exercise_stats.calories_out or 0} kcal
+- 運動次數：{exercise_stats.exercise_count or 0} 次
+
+請直接生成健康報告內容，不要包含任何對話性開頭（如「好的」、「這是一份」等），直接從報告標題開始。
+
+報告應包含以下部分：
+1. 今日總結
+2. 營養分析
+3. 運動總結
+4. 健康建議
+
+請使用繁體中文，使用Markdown格式（標題用###，粗體用**，列表用*），直接輸出報告內容。
+"""
     
     try:
         ai_report = generate_text(report_prompt)
