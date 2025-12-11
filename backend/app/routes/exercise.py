@@ -182,7 +182,7 @@ async def record_exercise(
             assistant_message = Message(
                 conversation_id=conversation.id,
                 role="assistant",
-                content=f"✅ 運動記錄已保存！\n\n**運動項目**：{exercise_type}\n**時長**：{request.duration} 分鐘\n**強度**：{intensity_text}\n**消耗卡路里**：{calories_burned} kcal"
+                content=f"✅ 運動記錄已保存！\n\n運動項目：{exercise_type}\n時長：{request.duration} 分鐘\n強度：{intensity_text}\n消耗卡路里：{calories_burned} kcal"
             )
             db.add(assistant_message)
             db.commit()
@@ -212,7 +212,7 @@ async def record_exercise(
             assistant_message = Message(
                 conversation_id=conversation.id,
                 role="assistant",
-                content=f"✅ 運動記錄已保存！\n\n**運動項目**：{exercise_type}\n**時長**：{request.duration} 分鐘\n**強度**：{intensity_text}\n**消耗卡路里**：{calories_burned} kcal"
+                content=f"✅ 運動記錄已保存！\n\n運動項目：{exercise_type}\n時長：{request.duration} 分鐘\n強度：{intensity_text}\n消耗卡路里：{calories_burned} kcal"
             )
             db.add(assistant_message)
             db.commit()

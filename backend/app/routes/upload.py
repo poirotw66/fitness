@@ -100,17 +100,20 @@ async def upload_image(
             }
             
             # Save assistant response
+            nutrition_label_status = "📋 已識別營養成分表" if analysis_result.get("has_nutrition_label", False) else "🔍 已推估營養成分"
+            estimated_note = "(此為推估值，建議參考實際營養標籤)" if analysis_result.get("estimated", False) else ""
+            
             response_text = f"""✅ 圖片分析完成！
 
-**食物名稱**：{food_name}
-**份量**：{analysis_result.get("serving_size", "未指定")}
-**卡路里**：{analysis_result.get("calories", 0)} kcal
-**蛋白質**：{analysis_result.get("protein", 0)} g
-**碳水化合物**：{analysis_result.get("carbs", 0)} g
-**脂肪**：{analysis_result.get("fat", 0)} g
+食物名稱：{food_name}
+份量：{analysis_result.get("serving_size", "未指定")}
+卡路里：{analysis_result.get("calories", 0)} kcal
+蛋白質：{analysis_result.get("protein", 0)} g
+碳水化合物：{analysis_result.get("carbs", 0)} g
+脂肪：{analysis_result.get("fat", 0)} g
 
-{analysis_result.get("has_nutrition_label", False) and "📋 已識別營養成分表" or "🔍 已推估營養成分"}
-{analysis_result.get("estimated", False) and "(此為推估值，建議參考實際營養標籤)" or ""}
+{nutrition_label_status}
+{estimated_note}
 
 已自動記錄為{meal_type_names.get(corrected_meal_type, "點心")}！"""
             

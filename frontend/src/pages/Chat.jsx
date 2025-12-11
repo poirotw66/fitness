@@ -290,7 +290,7 @@ function Chat() {
             },
             {
               role: 'assistant',
-              content: `✅ 圖片分析完成！\n\n**食物名稱**：${data.food_name}\n**卡路里**：${data.calories} kcal\n已自動記錄為${data.meal_type === 'breakfast' ? '早餐' : data.meal_type === 'lunch' ? '午餐' : data.meal_type === 'dinner' ? '晚餐' : '點心'}！`,
+              content: `✅ 圖片分析完成！\n\n食物名稱：${data.food_name}\n卡路里：${data.calories} kcal\n已自動記錄為${data.meal_type === 'breakfast' ? '早餐' : data.meal_type === 'lunch' ? '午餐' : data.meal_type === 'dinner' ? '晚餐' : '點心'}！`,
               nutritionData: data,
             }
           ])
@@ -363,7 +363,7 @@ function Chat() {
           }
           const assistantMessage = {
             role: 'assistant',
-            content: `✅ 運動記錄已保存！\n\n**運動項目**：${exerciseTypeToUse}\n**時長**：${exerciseDuration} 分鐘\n**強度**：${exerciseIntensity === 'low' ? '低強度' : exerciseIntensity === 'moderate' ? '中強度' : '高強度'}\n**消耗卡路里**：${response.data.calories_burned} kcal`
+            content: `✅ 運動記錄已保存！\n\n運動項目：${exerciseTypeToUse}\n時長：${exerciseDuration} 分鐘\n強度：${exerciseIntensity === 'low' ? '低強度' : exerciseIntensity === 'moderate' ? '中強度' : '高強度'}\n消耗卡路里：${response.data.calories_burned} kcal`
           }
           setMessages((prev) => [...prev, userMessage, assistantMessage])
         }
