@@ -131,6 +131,7 @@ async def chat(
             protein=diet_data.get("protein", 0),
             carbs=diet_data.get("carbs", 0),
             fat=diet_data.get("fat", 0),
+            vegetables=diet_data.get("vegetables", 0),
         )
     
     if extracted.get("exercise", {}).get("has_exercise"):
@@ -231,6 +232,7 @@ async def chat_stream(
             protein=diet_data.get("protein", 0),
             carbs=diet_data.get("carbs", 0),
             fat=diet_data.get("fat", 0),
+            vegetables=diet_data.get("vegetables", 0),
         )
     
     if extracted.get("exercise", {}).get("has_exercise"):

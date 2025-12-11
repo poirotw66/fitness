@@ -14,6 +14,7 @@ class DietService:
         protein: float = 0,
         carbs: float = 0,
         fat: float = 0,
+        vegetables: float = 0,
     ):
         """Save a diet log entry"""
         diet_log = DietLog(
@@ -25,6 +26,7 @@ class DietService:
             protein=protein,
             carbs=carbs,
             fat=fat,
+            vegetables=vegetables or 0,
         )
         db.add(diet_log)
         db.commit()

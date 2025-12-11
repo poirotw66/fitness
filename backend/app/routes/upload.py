@@ -90,6 +90,7 @@ async def upload_image(
                 protein=analysis_result.get("protein", 0),
                 carbs=analysis_result.get("carbs", 0),
                 fat=analysis_result.get("fat", 0),
+                vegetables=analysis_result.get("vegetables", 0),
             )
             
             meal_type_names = {
@@ -111,6 +112,7 @@ async def upload_image(
 蛋白質：{analysis_result.get("protein", 0)} g
 碳水化合物：{analysis_result.get("carbs", 0)} g
 脂肪：{analysis_result.get("fat", 0)} g
+{analysis_result.get("vegetables", 0) > 0 and f"蔬菜：{analysis_result.get('vegetables', 0)} g" or ""}
 
 {nutrition_label_status}
 {estimated_note}
@@ -137,6 +139,7 @@ async def upload_image(
                     "protein": analysis_result.get("protein"),
                     "carbs": analysis_result.get("carbs"),
                     "fat": analysis_result.get("fat"),
+                    "vegetables": analysis_result.get("vegetables", 0),
                     "has_nutrition_label": analysis_result.get("has_nutrition_label", False),
                     "estimated": analysis_result.get("estimated", False),
                     "meal_type": corrected_meal_type,

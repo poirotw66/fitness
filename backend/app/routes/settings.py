@@ -30,6 +30,7 @@ class UserSettingsResponse(BaseModel):
     recommended_protein: Optional[float] = None
     recommended_carbs: Optional[float] = None
     recommended_fat: Optional[float] = None
+    recommended_vegetables: Optional[float] = None
 
 
 def calculate_bmr(gender: str, weight: float, height: float, age: int) -> float:
@@ -152,6 +153,7 @@ async def get_settings(
         "recommended_protein": nutrition_rec["protein"] if nutrition_rec else None,
         "recommended_carbs": nutrition_rec["carbs"] if nutrition_rec else None,
         "recommended_fat": nutrition_rec["fat"] if nutrition_rec else None,
+        "recommended_vegetables": nutrition_rec["vegetables"] if nutrition_rec else None,
     }
 
 
@@ -236,6 +238,7 @@ async def update_settings(
         "recommended_protein": nutrition_rec["protein"] if nutrition_rec else None,
         "recommended_carbs": nutrition_rec["carbs"] if nutrition_rec else None,
         "recommended_fat": nutrition_rec["fat"] if nutrition_rec else None,
+        "recommended_vegetables": nutrition_rec["vegetables"] if nutrition_rec else None,
     }
 
 

@@ -149,23 +149,39 @@ function StatsPanel() {
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">營養成分</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">蛋白質</span>
-                  <span className="font-semibold">{stats.protein || 0} g</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">碳水化合物</span>
-                  <span className="font-semibold">{stats.carbs || 0} g</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">脂肪</span>
-                  <span className="font-semibold">{stats.fat || 0} g</span>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">營養成分</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">蛋白質</span>
+                    <span className="font-semibold">{stats.protein || 0} g</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">碳水化合物</span>
+                    <span className="font-semibold">{stats.carbs || 0} g</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">脂肪</span>
+                    <span className="font-semibold">{stats.fat || 0} g</span>
+                  </div>
+                  {stats.vegetables !== undefined && (
+                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                      <span className="text-sm text-gray-600">蔬菜</span>
+                      <span className="font-semibold text-green-600">{Math.round(stats.vegetables || 0)} g</span>
+                    </div>
+                  )}
+                  {stats.recommended_vegetables && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      建議：{stats.recommended_vegetables.toFixed(0)} g
+                      {stats.vegetables && (
+                        <span className={`ml-2 ${stats.vegetables >= stats.recommended_vegetables ? 'text-green-600' : 'text-orange-600'}`}>
+                          ({stats.vegetables >= stats.recommended_vegetables ? '已達標' : '未達標'})
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
 
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">運動</h3>

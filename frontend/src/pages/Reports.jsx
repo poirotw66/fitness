@@ -5,7 +5,7 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import ReactMarkdown from 'react-markdown'
 import api from '../services/api'
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#82CA9D']
 
 function Reports() {
   const [reports, setReports] = useState([])
@@ -52,11 +52,13 @@ function Reports() {
     navigate('/login')
   }
 
+  // 营养成分分布图数据（只显示宏量营养素：蛋白质、碳水化合物、脂肪）
+  // 注意：蔬菜不包含在圆饼图中，因为蔬菜不是宏量营养素
   const chartData = reports.length > 0 ? [
-    { name: '蛋白質', value: reports[0].protein || 0 },
-    { name: '碳水化合物', value: reports[0].carbs || 0 },
-    { name: '脂肪', value: reports[0].fat || 0 },
-  ] : []
+    { name: '蛋白質', value: Math.max(0, reports[0].protein || 0) },
+    { name: '碳水化合物', value: Math.max(0, reports[0].carbs || 0) },
+    { name: '脂肪', value: Math.max(0, reports[0].fat || 0) },
+  ].filter(item => item.value > 0) : []  // 只显示有值的项目
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -224,9 +226,20 @@ function Reports() {
                             fill="#8884d8"
                             dataKey="value"
                           >
-                            {chartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
+                            {chartData.map((entry, index) => {
+                              // 确保颜色和标签正确对应
+                              const colorMap = {
+                                '蛋白質': COLORS[0],      // 蓝色
+                                '碳水化合物': COLORS[1],  // 绿色
+                                '脂肪': COLORS[2],        // 黄色
+                              }
+                              return (
+                                <Cell 
+                                  key={`cell-${entry.name}-${index}`} 
+                                  fill={colorMap[entry.name] || COLORS[index % COLORS.length]} 
+                                />
+                              )
+                            })}
                           </Pie>
                           <Tooltip />
                         </PieChart>
@@ -295,6 +308,28 @@ function Reports() {
                             )}
                           </p>
                         </div>
+                        {reports[0].vegetables !== undefined && (
+                          <div>
+                            <div className="flex justify-between mb-1">
+                              <span className="text-sm text-gray-700 font-medium">蔬菜</span>
+                              <span className="text-sm font-semibold text-green-600">{Math.round(reports[0].vegetables || 0)} g</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div
+                                className="bg-green-600 h-2.5 rounded-full transition-all"
+                                style={{ width: `${reports[0].recommended_vegetables ? Math.min(((reports[0].vegetables || 0) / reports[0].recommended_vegetables) * 100, 100) : Math.min(((reports[0].vegetables || 0) / 400) * 100, 100)}%` }}
+                              ></div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              建議每日攝取：{reports[0].recommended_vegetables ? `${reports[0].recommended_vegetables.toFixed(0)} g` : '400g（預設）'} ({reports[0].recommended_vegetables ? Math.round(reports[0].recommended_vegetables / 100) : 4} 份)
+                              {reports[0].recommended_vegetables && reports[0].vegetables && (
+                                <span className={`ml-2 ${reports[0].vegetables >= reports[0].recommended_vegetables ? 'text-green-600' : 'text-orange-600'}`}>
+                                  ({reports[0].vegetables >= reports[0].recommended_vegetables ? '已達標' : '未達標'})
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

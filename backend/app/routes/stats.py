@@ -52,6 +52,7 @@ async def get_today_stats(
         func.sum(DietLog.protein).label("protein"),
         func.sum(DietLog.carbs).label("carbs"),
         func.sum(DietLog.fat).label("fat"),
+        func.sum(DietLog.vegetables).label("vegetables"),
     ).filter(
         DietLog.user_id == current_user.id,
         DietLog.date == today
@@ -131,18 +132,31 @@ async def get_today_stats(
         if current_user.activity_level:
             tdee = calculate_tdee(bmr, current_user.activity_level.value)
     
+    # Calculate nutrition recommendations
+    nutrition_rec = None
+    if current_user.weight and tdee:
+        from app.routes.settings import calculate_nutrition_recommendations
+        nutrition_rec = calculate_nutrition_recommendations(
+            weight=current_user.weight,
+            tdee=tdee,
+            goal=current_user.goal.value if current_user.goal else None,
+            activity_level=current_user.activity_level.value if current_user.activity_level else None
+        )
+    
     return {
         "calories_in": float(diet_stats.calories_in or 0),
         "calories_out": float(exercise_stats.calories_out or 0),
         "protein": float(diet_stats.protein or 0),
         "carbs": float(diet_stats.carbs or 0),
         "fat": float(diet_stats.fat or 0),
+        "vegetables": float(diet_stats.vegetables or 0),
         "exercise_count": int(exercise_stats.exercise_count or 0),
         "total_duration": float(exercise_stats.total_duration or 0),
         "exercises": exercises_detail,
         "meals": meals_list,
         "bmr": round(bmr, 2) if bmr else None,
         "tdee": round(tdee, 2) if tdee else None,
+        "recommended_vegetables": nutrition_rec["vegetables"] if nutrition_rec else None,
     }
 
 

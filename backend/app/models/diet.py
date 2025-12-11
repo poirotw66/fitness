@@ -16,6 +16,7 @@ class DietLog(Base):
     protein = Column(Float, nullable=False, default=0)
     carbs = Column(Float, nullable=False, default=0)
     fat = Column(Float, nullable=False, default=0)
+    vegetables = Column(Float, nullable=True, default=0)  # 蔬菜含量（克）
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

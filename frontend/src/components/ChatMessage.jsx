@@ -51,6 +51,14 @@ function ChatMessage({ message }) {
                   {message.nutritionData.fat} g
                 </span>
               </div>
+              {message.nutritionData.vegetables > 0 && (
+                <div>
+                  <span className={isUser ? 'text-indigo-200' : 'text-gray-600'}>蔬菜</span>
+                  <span className={`block font-semibold ${isUser ? 'text-white' : 'text-green-600'}`}>
+                    {message.nutritionData.vegetables} g
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}

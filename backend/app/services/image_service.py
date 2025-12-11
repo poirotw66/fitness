@@ -52,6 +52,7 @@ def analyze_food_image(image_data: bytes) -> dict:
    - 估計蛋白質（克）
    - 估計碳水化合物（克）
    - 估計脂肪（克）
+   - 估計蔬菜含量（克）- 如果食物中包含蔬菜，請估算蔬菜的重量（例如：沙拉、炒青菜、蔬菜湯等）
 
 請以JSON格式返回，格式如下：
 {
@@ -62,6 +63,7 @@ def analyze_food_image(image_data: bytes) -> dict:
     "protein": 數字（克）,
     "carbs": 數字（克）,
     "fat": 數字（克）,
+    "vegetables": 數字（克，如果食物包含蔬菜，否則為0）,
     "nutrition_label_data": {
         "serving_size": "如果有營養成分表",
         "calories": 數字,
@@ -102,6 +104,8 @@ def analyze_food_image(image_data: bytes) -> dict:
                 }
         
         # Use nutrition label data if available, otherwise use estimated values
+        vegetables = float(result.get("vegetables", 0))
+        
         if result.get("has_nutrition_label") and result.get("nutrition_label_data"):
             label_data = result["nutrition_label_data"]
             return {
@@ -111,6 +115,7 @@ def analyze_food_image(image_data: bytes) -> dict:
                 "protein": float(label_data.get("protein", result.get("protein", 0))),
                 "carbs": float(label_data.get("carbs", result.get("carbs", 0))),
                 "fat": float(label_data.get("fat", result.get("fat", 0))),
+                "vegetables": vegetables,
                 "has_nutrition_label": True,
                 "estimated": False
             }
@@ -122,6 +127,7 @@ def analyze_food_image(image_data: bytes) -> dict:
                 "protein": float(result.get("protein", 0)),
                 "carbs": float(result.get("carbs", 0)),
                 "fat": float(result.get("fat", 0)),
+                "vegetables": vegetables,
                 "has_nutrition_label": False,
                 "estimated": True
             }
@@ -135,6 +141,7 @@ def analyze_food_image(image_data: bytes) -> dict:
             "protein": 0,
             "carbs": 0,
             "fat": 0,
+            "vegetables": 0,
             "has_nutrition_label": False,
             "estimated": False,
             "error": str(e)
