@@ -24,17 +24,17 @@ async def upload_image(
     db: Session = Depends(get_db)
 ):
     """
-    上传食物图片并分析营养成分
+    上傳食物圖片並分析營養成分
     meal_type: breakfast, lunch, dinner, snack
     """
     # Validate file type
     if not file.content_type or not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="文件必须是图片格式")
+        raise HTTPException(status_code=400, detail="檔案必須是圖片格式")
     
     # Validate meal type
     valid_meal_types = ["breakfast", "lunch", "dinner", "snack"]
     if meal_type not in valid_meal_types:
-        raise HTTPException(status_code=400, detail=f"meal_type 必须是: {', '.join(valid_meal_types)}")
+        raise HTTPException(status_code=400, detail=f"meal_type 必須是: {', '.join(valid_meal_types)}")
     
     try:
         # Read image data
@@ -149,11 +149,11 @@ async def upload_image(
         else:
             return {
                 "success": False,
-                "message": "图片分析失败",
+                "message": "圖片分析失敗",
                 "error": analysis_result.get("error"),
                 "data": analysis_result
             }
             
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"处理图片时发生错误: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"處理圖片時發生錯誤: {str(e)}")
 
