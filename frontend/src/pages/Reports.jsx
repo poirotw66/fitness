@@ -10,6 +10,7 @@ function Reports() {
   const [reports, setReports] = useState([])
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
   const { logout } = useAuthStore()
   const navigate = useNavigate()
 
@@ -26,6 +27,22 @@ function Reports() {
       console.error('Error fetching reports:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const generateReport = async () => {
+    try {
+      setGenerating(true)
+      const response = await api.post(`/reports/generate?date=${selectedDate}`)
+      if (response.data.success) {
+        // Refresh reports to show the new AI report
+        await fetchReports()
+      }
+    } catch (error) {
+      console.error('Error generating report:', error)
+      alert('生成報告失敗，請稍後再試')
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -186,18 +203,46 @@ function Reports() {
             </div>
 
             {/* Report Content */}
-            {reports[0].report_content && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold mb-4">AI 生成報告</h3>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">AI 生成報告</h3>
+                {reports[0].has_ai_report ? (
+                  <button
+                    onClick={generateReport}
+                    disabled={generating}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {generating ? '重新生成中...' : '重新生成報告'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={generateReport}
+                    disabled={generating}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? '生成中...' : '立即生成報告'}
+                  </button>
+                )}
+              </div>
+              {reports[0].report_content ? (
                 <div className="prose max-w-none">
                   <p className="text-gray-700 whitespace-pre-wrap">
-                    {typeof reports[0].report_content === 'string'
-                      ? reports[0].report_content
-                      : JSON.stringify(reports[0].report_content, null, 2)}
+                    {reports[0].report_content}
                   </p>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <p className="mb-4">尚未生成 AI 報告</p>
+                  <button
+                    onClick={generateReport}
+                    disabled={generating}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? '生成中...' : '立即生成報告'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

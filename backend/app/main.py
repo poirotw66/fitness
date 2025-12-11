@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.models.database import init_db
 from app.routes import auth, chat, stats, reports, upload, admin
+from app.services.report_scheduler import start_scheduler, stop_scheduler
+import atexit
 
 app = FastAPI(title="Fitness AI Agent API", version="1.0.0")
 
@@ -16,6 +18,12 @@ app.add_middleware(
 
 # Initialize database
 init_db()
+
+# Start scheduler for daily report generation at 9 PM
+start_scheduler()
+
+# Register shutdown handler
+atexit.register(stop_scheduler)
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
@@ -34,5 +42,10 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    stop_scheduler()
 
 
