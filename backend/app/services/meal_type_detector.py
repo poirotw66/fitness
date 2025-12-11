@@ -72,7 +72,14 @@ def detect_meal_type_from_text(text: str, current_meal_type: str = "snack") -> s
 def correct_meal_type(food_name: str, meal_type: str, user_message: str = "") -> str:
     """
     修正餐点类型
+    如果用户明确选择了餐点类型（非snack），优先使用用户选择
+    只有当用户选择的是snack时，才根据食物名称和时间进行推断
     """
+    # 如果用户明确选择了餐点类型（非snack），直接返回用户选择
+    if meal_type in ["breakfast", "lunch", "dinner"]:
+        return meal_type
+    
+    # 只有当用户选择的是snack时，才进行推断
     # 组合所有文本进行检测
     combined_text = f"{food_name} {user_message}"
     corrected = detect_meal_type_from_text(combined_text, meal_type)

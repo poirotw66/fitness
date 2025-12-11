@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.models.database import init_db
-from app.routes import auth, chat, stats, reports, upload, admin, settings
+from app.routes import auth, chat, stats, reports, upload, admin, settings, exercise
 from app.services.report_scheduler import start_scheduler, stop_scheduler
 import atexit
 
@@ -33,6 +33,7 @@ app.include_router(reports.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
+app.include_router(exercise.router, prefix="/api")
 
 
 @app.get("/")

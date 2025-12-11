@@ -10,10 +10,14 @@ function Settings() {
     weight: '',
     age: '',
     activity_level: '',
+    goal: '',
   })
   const [calculated, setCalculated] = useState({
     bmr: null,
     tdee: null,
+    recommended_protein: null,
+    recommended_carbs: null,
+    recommended_fat: null,
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -34,10 +38,14 @@ function Settings() {
         weight: response.data.weight || '',
         age: response.data.age || '',
         activity_level: response.data.activity_level || '',
+        goal: response.data.goal || '',
       })
       setCalculated({
         bmr: response.data.bmr,
         tdee: response.data.tdee,
+        recommended_protein: response.data.recommended_protein,
+        recommended_carbs: response.data.recommended_carbs,
+        recommended_fat: response.data.recommended_fat,
       })
     } catch (error) {
       console.error('Error fetching settings:', error)
@@ -54,6 +62,9 @@ function Settings() {
       setCalculated({
         bmr: response.data.bmr,
         tdee: response.data.tdee,
+        recommended_protein: response.data.recommended_protein,
+        recommended_carbs: response.data.recommended_carbs,
+        recommended_fat: response.data.recommended_fat,
       })
       alert('設定已儲存')
     } catch (error) {
@@ -182,6 +193,51 @@ function Settings() {
             />
           </div>
 
+          {/* Goal */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              目標
+            </label>
+            <div className="space-y-2">
+              <label className={`flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                settings.goal === 'maintain'
+                  ? 'border-indigo-500 bg-indigo-50'
+                  : 'border-gray-300'
+              }`}>
+                <input
+                  type="radio"
+                  name="goal"
+                  value="maintain"
+                  checked={settings.goal === 'maintain'}
+                  onChange={handleChange}
+                  className="mt-1 mr-3"
+                />
+                <div>
+                  <div className="font-medium text-gray-900">維持身材</div>
+                  <div className="text-sm text-gray-600">維持當前體重和體態</div>
+                </div>
+              </label>
+              <label className={`flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                settings.goal === 'gain_muscle'
+                  ? 'border-indigo-500 bg-indigo-50'
+                  : 'border-gray-300'
+              }`}>
+                <input
+                  type="radio"
+                  name="goal"
+                  value="gain_muscle"
+                  checked={settings.goal === 'gain_muscle'}
+                  onChange={handleChange}
+                  className="mt-1 mr-3"
+                />
+                <div>
+                  <div className="font-medium text-gray-900">增加肌肉</div>
+                  <div className="text-sm text-gray-600">增肌訓練，需要更多蛋白質和碳水化合物</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           {/* Activity Level */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -219,7 +275,7 @@ function Settings() {
           {(calculated.bmr || calculated.tdee) && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-indigo-900 mb-4">計算結果</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <div className="text-sm text-indigo-700 mb-1">基礎代謝率 (BMR)</div>
                   <div className="text-2xl font-bold text-indigo-900">
@@ -239,6 +295,32 @@ function Settings() {
                   </div>
                 </div>
               </div>
+              {/* Nutrition Recommendations */}
+              {(calculated.recommended_protein || calculated.recommended_carbs || calculated.recommended_fat) && (
+                <div className="pt-4 border-t border-indigo-200">
+                  <h4 className="text-sm font-semibold text-indigo-900 mb-3">個人推薦營養攝取量</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="bg-white rounded-lg p-3">
+                      <div className="text-xs text-gray-600 mb-1">蛋白質</div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {calculated.recommended_protein ? `${calculated.recommended_protein.toFixed(1)} g` : '-'}
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3">
+                      <div className="text-xs text-gray-600 mb-1">碳水化合物</div>
+                      <div className="text-lg font-bold text-green-600">
+                        {calculated.recommended_carbs ? `${calculated.recommended_carbs.toFixed(1)} g` : '-'}
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3">
+                      <div className="text-xs text-gray-600 mb-1">脂肪</div>
+                      <div className="text-lg font-bold text-yellow-600">
+                        {calculated.recommended_fat ? `${calculated.recommended_fat.toFixed(1)} g` : '-'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -259,4 +341,6 @@ function Settings() {
 }
 
 export default Settings
+
+
 

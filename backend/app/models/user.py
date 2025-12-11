@@ -17,6 +17,11 @@ class ActivityLevelEnum(str, enum.Enum):
     very_active = "very_active"  # 非常高活动量（重训者、体力职业）
 
 
+class GoalEnum(str, enum.Enum):
+    maintain = "maintain"  # 维持身材
+    gain_muscle = "gain_muscle"  # 增加肌肉
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -32,6 +37,7 @@ class User(Base):
     weight = Column(Float, nullable=True)  # in kg
     age = Column(Integer, nullable=True)
     activity_level = Column(Enum(ActivityLevelEnum), nullable=True)
+    goal = Column(Enum(GoalEnum), nullable=True)  # 目标：维持身材 or 增加肌肉
 
     # Relationships
     conversations = relationship("Conversation", back_populates="user")

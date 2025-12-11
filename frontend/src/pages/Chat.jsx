@@ -15,6 +15,13 @@ function Chat() {
   const [mealType, setMealType] = useState('snack')
   const [currentConversationId, setCurrentConversationId] = useState(null)
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [showExerciseModal, setShowExerciseModal] = useState(false)
+  const [exerciseType, setExerciseType] = useState('壁球')
+  const [customExerciseType, setCustomExerciseType] = useState('')
+  const [exerciseDuration, setExerciseDuration] = useState('')
+  const [exerciseIntensity, setExerciseIntensity] = useState('moderate')
+  const [submittingExercise, setSubmittingExercise] = useState(false)
+  const [availableExerciseTypes, setAvailableExerciseTypes] = useState(['羽毛球', '壁球'])
   const fileInputRef = useRef(null)
   const messagesEndRef = useRef(null)
   const { logout, user } = useAuthStore()
@@ -52,6 +59,22 @@ function Chat() {
     }
     
     loadOnMount()
+    
+    // Load available exercise types
+    const loadExerciseTypes = async () => {
+      try {
+        const response = await api.get('/exercise/types')
+        if (response.data && response.data.exercise_types) {
+          setAvailableExerciseTypes(response.data.exercise_types)
+          if (response.data.default) {
+            setExerciseType(response.data.default)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading exercise types:', error)
+      }
+    }
+    loadExerciseTypes()
   }, [])
 
   const loadConversationHistory = async () => {
@@ -296,6 +319,73 @@ function Chat() {
     }
   }
 
+  const handleExerciseSubmit = async (e) => {
+    e.preventDefault()
+    if (!exerciseDuration || parseFloat(exerciseDuration) <= 0) {
+      alert('請輸入有效的運動時間')
+      return
+    }
+
+    setSubmittingExercise(true)
+    try {
+      const exerciseTypeToUse = exerciseType === '自訂' ? customExerciseType : exerciseType
+      
+      if (!exerciseTypeToUse || exerciseTypeToUse.trim() === '') {
+        alert('請輸入運動項目名稱')
+        return
+      }
+
+      const response = await api.post('/exercise/record', {
+        exercise_type: exerciseType === '自訂' ? 'custom' : exerciseType,
+        duration: parseFloat(exerciseDuration),
+        intensity: exerciseIntensity,
+        custom_type: exerciseType === '自訂' ? customExerciseType : null,
+        conversation_id: currentConversationId
+      })
+
+      if (response.data.success) {
+        // Reload conversation to get messages from database
+        if (currentConversationId || response.data.conversation_id) {
+          const convId = response.data.conversation_id || currentConversationId
+          if (convId) {
+            setCurrentConversationId(convId)
+            localStorage.setItem('lastConversationId', convId.toString())
+            setTimeout(async () => {
+              await loadConversation(convId)
+              window.dispatchEvent(new Event('conversationUpdated'))
+            }, 300)
+          }
+        } else {
+          // Fallback: add messages locally if no conversation
+          const userMessage = {
+            role: 'user',
+            content: `記錄運動：${exerciseTypeToUse}，${exerciseDuration} 分鐘，${exerciseIntensity === 'low' ? '低強度' : exerciseIntensity === 'moderate' ? '中強度' : '高強度'}`
+          }
+          const assistantMessage = {
+            role: 'assistant',
+            content: `✅ 運動記錄已保存！\n\n**運動項目**：${exerciseTypeToUse}\n**時長**：${exerciseDuration} 分鐘\n**強度**：${exerciseIntensity === 'low' ? '低強度' : exerciseIntensity === 'moderate' ? '中強度' : '高強度'}\n**消耗卡路里**：${response.data.calories_burned} kcal`
+          }
+          setMessages((prev) => [...prev, userMessage, assistantMessage])
+        }
+        
+        // Close modal and reset form
+        setShowExerciseModal(false)
+        setExerciseDuration('')
+        setCustomExerciseType('')
+        setExerciseType('壁球')
+        setExerciseIntensity('moderate')
+        
+        // Trigger stats refresh
+        window.dispatchEvent(new Event('conversationUpdated'))
+      }
+    } catch (error) {
+      console.error('Error recording exercise:', error)
+      alert(error.response?.data?.detail || '記錄運動時發生錯誤，請稍後再試')
+    } finally {
+      setSubmittingExercise(false)
+    }
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Conversation History Sidebar */}
@@ -424,6 +514,16 @@ function Chat() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </label>
+              <button
+                type="button"
+                onClick={() => setShowExerciseModal(true)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer flex items-center gap-2"
+                title="記錄運動"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </button>
               <input
                 type="text"
                 value={input}
@@ -446,6 +546,131 @@ function Chat() {
 
       {/* Stats Panel */}
       <StatsPanel />
+
+      {/* Exercise Record Modal */}
+      {showExerciseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">記錄運動</h2>
+              <button
+                onClick={() => {
+                  setShowExerciseModal(false)
+                  setExerciseDuration('')
+                  setCustomExerciseType('')
+                  setExerciseType('壁球')
+                  setExerciseIntensity('moderate')
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleExerciseSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  運動項目
+                </label>
+                <select
+                  value={exerciseType}
+                  onChange={(e) => setExerciseType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={submittingExercise}
+                >
+                  {availableExerciseTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                  <option value="自訂">自訂項目</option>
+                </select>
+              </div>
+
+              {exerciseType === '自訂' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    輸入運動項目名稱
+                  </label>
+                  <input
+                    type="text"
+                    value={customExerciseType}
+                    onChange={(e) => setCustomExerciseType(e.target.value)}
+                    placeholder="例如：桌球、排球..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    disabled={submittingExercise}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  運動時間（分鐘）
+                </label>
+                <input
+                  type="number"
+                  value={exerciseDuration}
+                  onChange={(e) => setExerciseDuration(e.target.value)}
+                  placeholder="例如：30"
+                  min="1"
+                  max="600"
+                  step="1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={submittingExercise}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  運動強度
+                </label>
+                <select
+                  value={exerciseIntensity}
+                  onChange={(e) => setExerciseIntensity(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={submittingExercise}
+                >
+                  <option value="low">低強度</option>
+                  <option value="moderate">中強度</option>
+                  <option value="high">高強度</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  {exerciseIntensity === 'low' && '輕鬆的運動，例如：慢速、輕鬆對打'}
+                  {exerciseIntensity === 'moderate' && '中等強度，例如：正常速度、一般對打'}
+                  {exerciseIntensity === 'high' && '高強度，例如：快速、激烈對打'}
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExerciseModal(false)
+                    setExerciseDuration('')
+                    setCustomExerciseType('')
+                    setExerciseType('壁球')
+                    setExerciseIntensity('moderate')
+                  }}
+                  disabled={submittingExercise}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingExercise || !exerciseDuration}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingExercise ? '記錄中...' : '記錄運動'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

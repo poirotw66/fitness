@@ -10,6 +10,7 @@ from app.models.exercise import ExerciseLog
 from app.models.report import DailyReport
 from app.auth.security import get_current_user
 from app.services.gemini_service import generate_text
+from app.routes.settings import calculate_bmr, calculate_tdee, calculate_nutrition_recommendations
 import json
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -45,10 +46,44 @@ async def get_reports(
     exercise_stats = db.query(
         func.sum(ExerciseLog.calories_burned).label("calories_out"),
         func.count(ExerciseLog.id).label("exercise_count"),
+        func.sum(ExerciseLog.duration).label("total_duration"),
     ).filter(
         ExerciseLog.user_id == current_user.id,
         ExerciseLog.date == report_date
     ).first()
+    
+    # Get detailed exercise logs
+    exercise_logs = db.query(ExerciseLog).filter(
+        ExerciseLog.user_id == current_user.id,
+        ExerciseLog.date == report_date
+    ).order_by(ExerciseLog.created_at.desc()).all()
+    
+    exercises_detail = [
+        {
+            "exercise_type": log.exercise_type,
+            "duration": float(log.duration),
+            "calories_burned": float(log.calories_burned),
+        }
+        for log in exercise_logs
+    ]
+    
+    # Calculate BMR and TDEE
+    bmr = None
+    tdee = None
+    if current_user.gender and current_user.weight and current_user.height and current_user.age:
+        bmr = calculate_bmr(current_user.gender.value, current_user.weight, current_user.height, current_user.age)
+        if current_user.activity_level:
+            tdee = calculate_tdee(bmr, current_user.activity_level.value)
+    
+    # Calculate nutrition recommendations
+    nutrition_rec = None
+    if current_user.weight and tdee:
+        nutrition_rec = calculate_nutrition_recommendations(
+            weight=current_user.weight,
+            tdee=tdee,
+            goal=current_user.goal.value if current_user.goal else None,
+            activity_level=current_user.activity_level.value if current_user.activity_level else None
+        )
     
     # Check if AI report exists
     report = db.query(DailyReport).filter(
@@ -69,6 +104,13 @@ async def get_reports(
         "carbs": float(diet_stats.carbs or 0),
         "fat": float(diet_stats.fat or 0),
         "exercise_count": int(exercise_stats.exercise_count or 0),
+        "total_duration": float(exercise_stats.total_duration or 0),
+        "exercises": exercises_detail,
+        "bmr": round(bmr, 2) if bmr else None,
+        "tdee": round(tdee, 2) if tdee else None,
+        "recommended_protein": nutrition_rec["protein"] if nutrition_rec else None,
+        "recommended_carbs": nutrition_rec["carbs"] if nutrition_rec else None,
+        "recommended_fat": nutrition_rec["fat"] if nutrition_rec else None,
         "report_content": report_content,
         "has_ai_report": bool(report_content),
     }]
