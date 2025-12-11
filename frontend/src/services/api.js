@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '../context/authStore'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
@@ -7,18 +8,32 @@ const api = axios.create({
   },
 })
 
-// Add token to requests if available
-const token = localStorage.getItem('auth-storage')
-if (token) {
-  try {
-    const parsed = JSON.parse(token)
-    if (parsed.state?.token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${parsed.state.token}`
+// Add request interceptor to include token in every request
+api.interceptors.request.use(
+  (config) => {
+    const token = useAuthStore.getState().token
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
-  } catch (e) {
-    // Ignore parse errors
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
   }
-}
+)
+
+// Add response interceptor to handle 401 errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid, logout user
+      useAuthStore.getState().logout()
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
 
 export default api
 

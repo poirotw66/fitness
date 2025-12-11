@@ -1,18 +1,21 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-sqlalchemy==2.0.23
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
-pydantic==2.5.0
-pydantic-settings==2.1.0
-langchain==0.1.0
-langchain-google-genai==0.0.5
-langgraph==0.0.20
-google-generativeai==0.3.2
-python-dotenv==1.0.0
-psycopg2-binary==2.9.9
-Pillow==10.1.0
-apscheduler==3.10.4
+# Core & Agent Framework
+langchain>=1.0,<2.0
+langgraph>=1.0,<2.0
+langchain-google-genai>=2.1.12
 
-
+# 其他你需要的套件
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt==4.0.1
+python-multipart
+pydantic
+pydantic-settings
+python-dotenv
+psycopg2-binary
+Pillow
+apscheduler
+pydantic[email]
+google-generativeai

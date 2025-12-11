@@ -8,6 +8,33 @@ from app.models.diet import DietLog
 from app.models.exercise import ExerciseLog
 from app.auth.security import get_current_user
 
+
+def calculate_bmr(gender: str, weight: float, height: float, age: int) -> float:
+    """
+    Calculate BMR using Mifflin-St Jeor Equation
+    Men: BMR = 10 × weight(kg) + 6.25 × height(cm) - 5 × age(years) + 5
+    Women: BMR = 10 × weight(kg) + 6.25 × height(cm) - 5 × age(years) - 161
+    """
+    base_bmr = 10 * weight + 6.25 * height - 5 * age
+    if gender == "male":
+        return base_bmr + 5
+    else:  # female
+        return base_bmr - 161
+
+
+def calculate_tdee(bmr: float, activity_level: str) -> float:
+    """
+    Calculate TDEE = BMR × Activity Factor
+    """
+    activity_factors = {
+        "sedentary": 1.2,      # 低活动量（久坐族）
+        "light": 1.375,         # 中活动量（一般活动者）
+        "moderate": 1.55,       # 高活动量（运动量大）
+        "very_active": 1.725,  # 非常高活动量（重训者、体力职业）
+    }
+    factor = activity_factors.get(activity_level, 1.2)
+    return bmr * factor
+
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
@@ -96,6 +123,14 @@ async def get_today_stats(
         for log in exercise_logs
     ]
     
+    # Calculate BMR and TDEE
+    bmr = None
+    tdee = None
+    if current_user.gender and current_user.weight and current_user.height and current_user.age:
+        bmr = calculate_bmr(current_user.gender.value, current_user.weight, current_user.height, current_user.age)
+        if current_user.activity_level:
+            tdee = calculate_tdee(bmr, current_user.activity_level.value)
+    
     return {
         "calories_in": float(diet_stats.calories_in or 0),
         "calories_out": float(exercise_stats.calories_out or 0),
@@ -106,6 +141,8 @@ async def get_today_stats(
         "total_duration": float(exercise_stats.total_duration or 0),
         "exercises": exercises_detail,
         "meals": meals_list,
+        "bmr": round(bmr, 2) if bmr else None,
+        "tdee": round(tdee, 2) if tdee else None,
     }
 
 

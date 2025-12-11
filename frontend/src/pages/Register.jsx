@@ -18,7 +18,9 @@ function Register() {
 
     const result = await register(username, email, password)
     if (result.success) {
-      navigate('/chat')
+      // Wait for state to be persisted
+      await new Promise(resolve => setTimeout(resolve, 200))
+      navigate('/chat', { replace: true })
     } else {
       setError(result.error)
     }

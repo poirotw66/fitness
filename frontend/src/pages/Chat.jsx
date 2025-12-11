@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../context/authStore'
 import ChatMessage from '../components/ChatMessage'
 import StatsPanel from '../components/StatsPanel'
@@ -312,6 +312,12 @@ function Chat() {
           <h1 className="text-xl font-semibold text-gray-900">身體管控 AI 助手</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">歡迎，{user?.username}</span>
+            <Link
+              to="/settings"
+              className="text-sm text-indigo-600 hover:text-indigo-800"
+            >
+              設定
+            </Link>
             <button
               onClick={handleLogout}
               className="text-sm text-indigo-600 hover:text-indigo-800"

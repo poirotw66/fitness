@@ -69,6 +69,12 @@ function Reports() {
           >
             返回對話
           </Link>
+          <Link
+            to="/settings"
+            className="text-sm text-indigo-600 hover:text-indigo-800"
+          >
+            設定
+          </Link>
           <button
             onClick={handleLogout}
             className="text-sm text-indigo-600 hover:text-indigo-800"

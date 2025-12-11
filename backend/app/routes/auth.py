@@ -89,7 +89,18 @@ async def login(
 ):
     """Login and get access token"""
     user = db.query(User).filter(User.username == user_data.username).first()
-    if not user or not verify_password(user_data.password, user.password_hash):
+    if not user:
+        print(f"Login failed: User '{user_data.username}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Verify password
+    password_valid = verify_password(user_data.password, user.password_hash)
+    if not password_valid:
+        print(f"Login failed: Invalid password for user '{user_data.username}'")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",

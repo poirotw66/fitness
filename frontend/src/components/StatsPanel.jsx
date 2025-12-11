@@ -51,10 +51,19 @@ function StatsPanel() {
     )
   }
 
+  // Get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   return (
     <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 className="font-semibold text-gray-900">今日統計</h2>
+        <h2 className="font-semibold text-gray-900">（{getTodayDate()}）今日統計</h2>
         <button
           onClick={() => setCollapsed(true)}
           className="p-1 hover:bg-gray-100 rounded"
@@ -70,6 +79,27 @@ function StatsPanel() {
           <div className="text-center text-gray-500">載入中...</div>
         ) : stats ? (
           <>
+            {/* BMR and TDEE */}
+            {(stats.bmr || stats.tdee) && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-indigo-900 mb-3">基礎代謝資訊</h3>
+                <div className="space-y-2">
+                  {stats.bmr && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-indigo-700">基礎代謝率 (BMR)</span>
+                      <span className="text-sm font-semibold text-indigo-900">{stats.bmr} kcal</span>
+                    </div>
+                  )}
+                  {stats.tdee && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-indigo-700">每日熱量消耗 (TDEE)</span>
+                      <span className="text-sm font-semibold text-indigo-900">{stats.tdee} kcal</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">卡路里</h3>
               <div className="space-y-3">
