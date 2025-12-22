@@ -76,45 +76,51 @@ def calculate_nutrition_recommendations(
             "fat": float (g)
         }
     """
-    # Protein calculation
+    # 1. Determine Target Calories based on Goal
+    target_calories = tdee
     if goal == "gain_muscle":
-        # 健身者、想增肌: 1.6 - 2.2 g/kg (使用平均值 1.9 g/kg)
-        protein = weight * 1.9
+        # Surplus of ~300-500 kcal (approx 10-15%)
+        target_calories = tdee * 1.15
+    
+    # 2. Determine Protein (Priority 1)
+    if goal == "gain_muscle":
+        # 1.8 - 2.2 g/kg for muscle gain (using 2.0)
+        protein_g = weight * 2.0
     else:
-        # 一般人: 1.0 - 1.2 g/kg (使用平均值 1.1 g/kg)
-        protein = weight * 1.1
+        # 1.2 - 1.5 g/kg for general health/maintenance (using 1.4)
+        # Slightly higher than RDA (0.8) for better satiety and muscle retention
+        protein_g = weight * 1.4
     
-    # Carbohydrate calculation
-    if goal == "gain_muscle" or activity_level in ["moderate", "very_active"]:
-        # 增肌或高活动者: 5-7 g/kg (一般训练) 或 7-10 g/kg (耐力运动)
-        # 根据活动量选择：moderate用6 g/kg, very_active用8 g/kg
-        if activity_level == "very_active":
-            carbs = weight * 8.0  # 7-10 g/kg 的平均值
-        else:
-            carbs = weight * 6.0  # 5-7 g/kg 的平均值
-    else:
-        # 一般情况: 45% - 60% TDEE (使用平均值 52.5%)
-        carbs_calories = tdee * 0.525
-        carbs = carbs_calories / 4  # 1g carbs = 4 kcal
+    protein_calories = protein_g * 4
+
+    # 3. Determine Fat (Priority 2)
+    # 25-30% of total calories is a healthy range
+    fat_ratio = 0.28
+    fat_calories = target_calories * fat_ratio
+    fat_g = fat_calories / 9
+
+    # 4. Determine Carbs (Remainder)
+    # Remaining calories go to carbs
+    carbs_calories = target_calories - protein_calories - fat_calories
+    # Ensure carbs don't drop too low (e.g., minimum 3g/kg for active people)
+    # If active, prioritize carbs a bit more? 
+    # For now, simple remainder is usually robust enough for standard diets
+    carbs_g = carbs_calories / 4
     
-    # Fat calculation
-    # 建议比例: 20% - 35% TDEE (使用平均值 27.5%)
-    fat_calories = tdee * 0.275
-    fat = fat_calories / 9  # 1g fat = 9 kcal
-    
-    # 确保脂肪不低于最低值: 0.6 - 1.0 g/kg (使用平均值 0.8 g/kg)
-    min_fat = weight * 0.8
-    if fat < min_fat:
-        fat = min_fat
-    
-    # Vegetable calculation
+    # Sanity check: Ensure non-negative
+    if carbs_g < 0:
+        carbs_g = 0
+        # If we have 0 carbs, we might need to adjust fat/protein down, 
+        # but unlikely with these ratios unless calories are extremely low.
+
+    # 5. Vegetable calculation
     # General guideline: ~400g minimum, scaling with calories
-    vegetables = max(400.0, (tdee / 2000.0) * 400.0)
+    vegetables = max(400.0, (target_calories / 2000.0) * 400.0)
 
     return {
-        "protein": round(protein, 1),
-        "carbs": round(carbs, 1),
-        "fat": round(fat, 1),
+        "protein": round(protein_g, 1),
+        "carbs": round(carbs_g, 1),
+        "fat": round(fat_g, 1),
         "vegetables": round(vegetables, 1),
     }
 

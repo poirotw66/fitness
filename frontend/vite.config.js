@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   base: '/fitness/', // For GitHub Pages deployment
   server: {
-    port: 3000,
+    port: 3001,
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
