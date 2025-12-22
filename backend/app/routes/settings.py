@@ -107,10 +107,15 @@ def calculate_nutrition_recommendations(
     if fat < min_fat:
         fat = min_fat
     
+    # Vegetable calculation
+    # General guideline: ~400g minimum, scaling with calories
+    vegetables = max(400.0, (tdee / 2000.0) * 400.0)
+
     return {
         "protein": round(protein, 1),
         "carbs": round(carbs, 1),
         "fat": round(fat, 1),
+        "vegetables": round(vegetables, 1),
     }
 
 
